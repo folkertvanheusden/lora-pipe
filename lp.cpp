@@ -8,11 +8,12 @@
 
 static void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosquitto_property *)
 {
-	printf("from mqtt: %d\n", msg->payload, msg->payloadlen);
+	printf("from mqtt: %d\n", msg->payloadlen);
 
 	LoRaPacket pkt(reinterpret_cast<unsigned char *>(msg->payload), msg->payloadlen);
 	LoRa *l = reinterpret_cast<LoRa *>(p);
 	size_t tx_size = l->transmitPacket(&pkt);
+	printf("transmitted: %zu\n", tx_size);
 }
 
 static void on_connect(mosquitto *mqtt, void *p, int)
@@ -65,8 +66,8 @@ int main(int argc, char *argv[])
 			printf("  Freq err: %d Hz\n", p.getFreqErr());
 			printf("  Payload : \n%s\n", p.getPayload());
 
-			if (mosquitto_publish(mqtt, nullptr, MQTT_TOPIC_TO, p.payloadLength(), p.getPayload(), 0, false) != MOSQ_ERR_SUCCESS)
-				fprintf(stderr, "Publish error\n");
+			if (int rc = mosquitto_publish(mqtt, nullptr, MQTT_TOPIC_TO, p.payloadLength(), p.getPayload(), 0, false); rc != MOSQ_ERR_SUCCESS)
+				fprintf(stderr, "Publish error: %s\n", mosquitto_strerror(rc));
 		}
 		else {
 			mosquitto_loop(mqtt, 1, 1);
