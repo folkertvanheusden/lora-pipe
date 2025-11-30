@@ -1,0 +1,3 @@
+[submodule "libLoRaPi"]
+	path = libLoRaPi
+	url = https://github.com/folkertvanheusden/libLoRaPi/
