@@ -18,7 +18,7 @@ static void on_message(mosquitto *, void *p, const mosquitto_message *msg, const
 static void on_connect(mosquitto *mqtt, void *p, int)
 {
 	printf("Subscribe to mqtt\n");
-	if (mosquitto_subscribe(mqtt, nullptr, "meshcore/fromwageningen", 0) != MOSQ_ERR_SUCCESS)
+	if (mosquitto_subscribe(mqtt, nullptr, MQTT_TOPIC_FROM, 0) != MOSQ_ERR_SUCCESS)
 		fprintf(stderr, "Subscribe error\n");
 }
 
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	printf("  Header mode  : %s\n", lora.getHeaderMode() == LoRa::HM_IMPLICIT ? "Implicit" : "Explicit");
 
 	mosquitto *mqtt = mosquitto_new(nullptr, true, &lora);
-	mosquitto_connect(mqtt, "vps001.vanheusden.com", 1883, 30);
+	mosquitto_connect(mqtt, MQTT_HOST, MQTT_PORT, 30);
         mosquitto_connect_callback_set(mqtt, on_connect);
         mosquitto_message_v5_callback_set(mqtt, on_message);
 
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 			printf("  Freq err: %d Hz\n", p.getFreqErr());
 			printf("  Payload : \n%s\n", p.getPayload());
 
-			if (mosquitto_publish(mqtt, nullptr, "meshcore/towageningen", p.payloadLength(), p.getPayload(), 0, false) != MOSQ_ERR_SUCCESS)
+			if (mosquitto_publish(mqtt, nullptr, MQTT_TOPIC_TO, p.payloadLength(), p.getPayload(), 0, false) != MOSQ_ERR_SUCCESS)
 				fprintf(stderr, "Publish error\n");
 		}
 		else {

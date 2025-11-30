@@ -21,3 +21,12 @@
 #define LR_SYNC_WORD	0x12
 #define LR_HEADER	LoRa::HM_EXPLICIT
 #define LR_PREAMBLE_LEN	16
+
+
+// MQTT settings
+// note that you need to swap FROM/TO on the other side
+
+#define MQTT_HOST	"vps001.vanheusden.com"
+#define MQTT_PORT	1883
+#define MQTT_TOPIC_FROM	"meshcore/fromwageningen"
+#define MQTT_TOPIC_TO	"meshcore/towageningen"
