@@ -19,3 +19,10 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads)
 target_link_libraries(lora-pipe Threads::Threads wiringPi)
 target_include_directories(lora-pipe PUBLIC libLoRaPi/src/include/)
+
+include(FindPkgConfig)
+
+pkg_check_modules(MQTT REQUIRED libmosquitto)
+target_link_libraries(lora-pipe ${MQTT_LIBRARIES})
+target_include_directories(lora-pipe PUBLIC ${MQTT_INCLUDE_DIRS})
+target_compile_options(lora-pipe PUBLIC ${MQTT_CFLAGS_OTHER})

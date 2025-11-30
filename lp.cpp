@@ -1,8 +1,26 @@
 #include <cstdio>
+#include <mosquitto.h>
+
 #include "config.h"
 #include "lora.h"
 #include "packet.h"
 
+
+static void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosquitto_property *)
+{
+	printf("from mqtt: %d\n", msg->payload, msg->payloadlen);
+
+	LoRaPacket pkt(reinterpret_cast<unsigned char *>(msg->payload), msg->payloadlen);
+	LoRa *l = reinterpret_cast<LoRa *>(p);
+	size_t tx_size = l->transmitPacket(&pkt);
+}
+
+static void on_connect(mosquitto *mqtt, void *p, int)
+{
+	printf("Subscribe to mqtt\n");
+	if (mosquitto_subscribe(mqtt, nullptr, "meshcore/fromwageningen", 0) != MOSQ_ERR_SUCCESS)
+		fprintf(stderr, "Subscribe error\n");
+}
 
 int main(int argc, char *argv[])
 {
@@ -31,15 +49,28 @@ int main(int argc, char *argv[])
 	printf("  Coding Rate  : 4/%d\n", lora.getCodingRate() + 4);
 	printf("  Sync word    : 0x%02x\n", lora.getSyncWord());
 	printf("  Header mode  : %s\n", lora.getHeaderMode() == LoRa::HM_IMPLICIT ? "Implicit" : "Explicit");
-	printf("Receiving...\n");
-	while (true) {
-		LoRaPacket p = lora.receivePacket();
-		printf("Received packet\n");
-		printf("  Bytes   : %d\n", p.payloadLength());
-		printf("  RSSI    : %d dBm\n", p.getPacketRSSI());
-		printf("  SNR     : %.1f dB\n", p.getSNR());
-		printf("  Freq err: %d Hz\n", p.getFreqErr());
-		printf("  Payload : \n%s\n", p.getPayload());
+
+	mosquitto *mqtt = mosquitto_new(nullptr, true, &lora);
+	mosquitto_connect(mqtt, "vps001.vanheusden.com", 1883, 30);
+        mosquitto_connect_callback_set(mqtt, on_connect);
+        mosquitto_message_v5_callback_set(mqtt, on_message);
+
+	for(;;) {
+		LoRaPacket p = lora.receivePacket(100);
+		if (p.payloadLength()) {
+			printf("Received packet\n");
+			printf("  Bytes   : %d\n", p.payloadLength());
+			printf("  RSSI    : %d dBm\n", p.getPacketRSSI());
+			printf("  SNR     : %.1f dB\n", p.getSNR());
+			printf("  Freq err: %d Hz\n", p.getFreqErr());
+			printf("  Payload : \n%s\n", p.getPayload());
+
+			if (mosquitto_publish(mqtt, nullptr, "meshcore/towageningen", p.payloadLength(), p.getPayload(), 0, false) != MOSQ_ERR_SUCCESS)
+				fprintf(stderr, "Publish error\n");
+		}
+		else {
+			mosquitto_loop(mqtt, 1, 1);
+		}
 	}
 
 	return 0;
