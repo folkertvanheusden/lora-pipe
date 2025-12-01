@@ -2,6 +2,7 @@ what it is
 ----------
 This program allows you to bridge a LoRa setup over a longer distance by using MQTT over e.g. an IP network.
 Use-case: extending the reach of MeshCore by bridging it over HAM-Net.
+It works transparently: you only need to know LoRa settings and then it should be able to bridge any protocol.
 
 
 ## required
