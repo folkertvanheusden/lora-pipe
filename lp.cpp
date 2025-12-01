@@ -1,6 +1,7 @@
 // (C) 2025 by Folkert van Heusden
 // released under MIT license
 #include <cstdio>
+#include <cstdlib>
 #include <mosquitto.h>
 
 #include "config.h"
@@ -21,8 +22,10 @@ static void on_message(mosquitto *, void *p, const mosquitto_message *msg, const
 static void on_connect(mosquitto *mqtt, void *p, int)
 {
 	printf("Subscribe to mqtt\n");
-	if (int rc = mosquitto_subscribe(mqtt, nullptr, MQTT_TOPIC_FROM, 0); rc != MOSQ_ERR_SUCCESS)
+	if (int rc = mosquitto_subscribe(mqtt, nullptr, MQTT_TOPIC_FROM, 0); rc != MOSQ_ERR_SUCCESS) {
 		fprintf(stderr, "Subscribe error: %s\n", mosquitto_strerror(rc));
+		exit(1);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -54,8 +57,10 @@ int main(int argc, char *argv[])
 	printf("  Header mode  : %s\n", lora.getHeaderMode() == LoRa::HM_IMPLICIT ? "Implicit" : "Explicit");
 
 	mosquitto *mqtt = mosquitto_new(nullptr, true, &lora);
-	if (int rc = mosquitto_connect(mqtt, MQTT_HOST, MQTT_PORT, 30); rc != MOSQ_ERR_SUCCESS)
+	if (int rc = mosquitto_connect(mqtt, MQTT_HOST, MQTT_PORT, 30); rc != MOSQ_ERR_SUCCESS) {
 		fprintf(stderr, "Failed to connect to MQTT host: %s\n", mosquitto_strerror(rc));
+		return 1;
+	}
         mosquitto_connect_callback_set(mqtt, on_connect);
         mosquitto_message_v5_callback_set(mqtt, on_message);
 
@@ -73,11 +78,16 @@ int main(int argc, char *argv[])
 				printf("%c", pnt[i] > 32 && pnt[i] < 127 ? pnt[i] : '.');
 			printf("\n\n");
 
-			if (int rc = mosquitto_publish(mqtt, nullptr, MQTT_TOPIC_TO, p.payloadLength(), p.getPayload(), 0, false); rc != MOSQ_ERR_SUCCESS)
+			if (int rc = mosquitto_publish(mqtt, nullptr, MQTT_TOPIC_TO, p.payloadLength(), p.getPayload(), 0, false); rc != MOSQ_ERR_SUCCESS) {
 				fprintf(stderr, "Publish error: %s\n", mosquitto_strerror(rc));
+				return 1;
+			}
 		}
 		else {
-			mosquitto_loop(mqtt, 1, 1);
+			if (int rc = mosquitto_loop(mqtt, 1, 1); rc != MOSQ_ERR_SUCCESS) {
+				fprintf(stderr, "Failed to connect to handle MQTT connection: %s\n", mosquitto_strerror(rc));
+				return 1;
+			}
 		}
 	}
 
