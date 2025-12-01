@@ -6,7 +6,7 @@ Use-case: extending the reach of MeshCore by bridging it over HAM-Net.
 
 ## required
 
-* an SX1272 radio connected to the SPI bus of a Raspberry Pi (tested with a Pi3 and a Pi5)
+* an SX1272 radio connected to the SPI bus of a Raspberry Pi (tested with a Pi3 and a Pi5, e.g. https://www.adafruit.com/product/3072 )
 * WiringPi: https://github.com/WiringPi/WiringPi
 * libmosquitto-dev
 
