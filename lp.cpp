@@ -66,7 +66,11 @@ int main(int argc, char *argv[])
 			printf("  RSSI    : %d dBm\n", p.getPacketRSSI());
 			printf("  SNR     : %.1f dB\n", p.getSNR());
 			printf("  Freq err: %d Hz\n", p.getFreqErr());
-			printf("  Payload : \n%s\n", p.getPayload());
+			printf("  Payload : \n");
+			auto *pnt = p.getPayload();
+			for(auto i=0; i<p.payloadLength(); i++)
+				printf("%c", pnt[i] > 32 && pnt[i] < 127 ? pnt[i] : '.');
+			printf("\n\n");
 
 			if (int rc = mosquitto_publish(mqtt, nullptr, MQTT_TOPIC_TO, p.payloadLength(), p.getPayload(), 0, false); rc != MOSQ_ERR_SUCCESS)
 				fprintf(stderr, "Publish error: %s\n", mosquitto_strerror(rc));
