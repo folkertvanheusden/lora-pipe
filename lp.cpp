@@ -21,8 +21,8 @@ static void on_message(mosquitto *, void *p, const mosquitto_message *msg, const
 static void on_connect(mosquitto *mqtt, void *p, int)
 {
 	printf("Subscribe to mqtt\n");
-	if (mosquitto_subscribe(mqtt, nullptr, MQTT_TOPIC_FROM, 0) != MOSQ_ERR_SUCCESS)
-		fprintf(stderr, "Subscribe error\n");
+	if (int rc = mosquitto_subscribe(mqtt, nullptr, MQTT_TOPIC_FROM, 0); rc != MOSQ_ERR_SUCCESS)
+		fprintf(stderr, "Subscribe error: %s\n", mosquitto_strerror(rc));
 }
 
 int main(int argc, char *argv[])
@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
 	printf("  Header mode  : %s\n", lora.getHeaderMode() == LoRa::HM_IMPLICIT ? "Implicit" : "Explicit");
 
 	mosquitto *mqtt = mosquitto_new(nullptr, true, &lora);
-	mosquitto_connect(mqtt, MQTT_HOST, MQTT_PORT, 30);
+	if (int rc = mosquitto_connect(mqtt, MQTT_HOST, MQTT_PORT, 30); rc != MOSQ_ERR_SUCCESS)
+		fprintf(stderr, "Failed to connect to MQTT host: %s\n", mosquitto_strerror(rc));
         mosquitto_connect_callback_set(mqtt, on_connect);
         mosquitto_message_v5_callback_set(mqtt, on_message);
 
