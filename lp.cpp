@@ -9,6 +9,37 @@
 #include "packet.h"
 
 
+static void dump(uint8_t *pnt, size_t len)
+{
+	if (len < 11) {
+		for(auto i=0; i<len; i++)
+			printf("%c", pnt[i] > 32 && pnt[i] < 127 ? pnt[i] : '.');
+	}
+	else {
+		printf("\tID   : %08x\n", (pnt[0] << 24) | (pnt[1] << 16) | (pnt[2] << 8) | pnt[3]);
+		printf("\tsrc  : %04x\n", (pnt[4] << 8) | pnt[5]);
+		printf("\tdst  : %04x\n", (pnt[6] << 8) | pnt[7]);
+		printf("\thops : %d\n", pnt[8]);
+		printf("\tflags: %02x\n", pnt[9]);
+		printf("\ttype : ");
+		if (pnt[10] == 0x01)
+			printf("text");
+		else if (pnt[10] == 0x02)
+			printf("position");
+		else if (pnt[10] == 0x03)
+			printf("telemetry");
+		else if (pnt[10] == 0x04)
+			printf("nodeinfo");
+		else if (pnt[10] == 0x05)
+			printf("routing");
+		else if (pnt[10] == 0x06)
+			printf("ack");
+		else
+			printf("%02x?", pnt[10]);
+		printf("\n");
+	}
+}
+
 static void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosquitto_property *)
 {
 	printf("from mqtt: %d\n", msg->payloadlen);
@@ -73,10 +104,7 @@ int main(int argc, char *argv[])
 			printf("  SNR     : %.1f dB\n", p.getSNR());
 			printf("  Freq err: %d Hz\n", p.getFreqErr());
 			printf("  Payload : \n");
-			auto *pnt = p.getPayload();
-			for(auto i=0; i<p.payloadLength(); i++)
-				printf("%c", pnt[i] > 32 && pnt[i] < 127 ? pnt[i] : '.');
-			printf("\n\n");
+			dump(p.getPayload(), p.payloadLength());
 
 			if (int rc = mosquitto_publish(mqtt, nullptr, MQTT_TOPIC_TO, p.payloadLength(), p.getPayload(), 0, false); rc != MOSQ_ERR_SUCCESS) {
 				fprintf(stderr, "Publish error: %s\n", mosquitto_strerror(rc));
