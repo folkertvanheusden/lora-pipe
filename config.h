@@ -2,8 +2,9 @@
 
 
 // on what pins is the SX1272 connected?
+// this uses wiringpi numbers
 
-#define SPI_BUS     1
+#define SPI_BUS     1  // on older PIs this is probably 0
 #define SPI_CHANNEL 0
 #define SS_PIN      27  // CE2, GPIO16
 #define DIO0_PIN    21  // GPIO5, interrupt
@@ -26,7 +27,7 @@
 // MQTT settings
 // note that you need to swap FROM/TO on the other side
 
-#define MQTT_HOST	"vps001.vanheusden.com"
+#define MQTT_HOST	"vps001.vanheusden.com"  // please use your own mqtt server
 #define MQTT_PORT	1883
 #define MQTT_TOPIC_FROM	"meshcore/fromwageningen"
 #define MQTT_TOPIC_TO	"meshcore/towageningen"

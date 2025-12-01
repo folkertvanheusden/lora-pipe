@@ -13,7 +13,8 @@ Use-case: extending the reach of MeshCore by bridging it over HAM-Net.
 
 ## configuration
 
-* adjust config.h
+* for it to work you must adjust config.h
+
 
 
 -- written by Folkert van Heusden <folkert@vanheusden.com>
