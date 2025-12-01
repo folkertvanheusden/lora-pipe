@@ -16,5 +16,10 @@ Use-case: extending the reach of MeshCore by bridging it over HAM-Net.
 * for it to work you must adjust config.h
 
 
+## license
+
+MIT
+
+
 
 -- written by Folkert van Heusden <folkert@vanheusden.com>

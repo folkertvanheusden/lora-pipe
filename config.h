@@ -1,3 +1,5 @@
+// (C) 2025 by Folkert van Heusden
+// released under MIT license
 #include "lora.h"
 
 
