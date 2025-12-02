@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
         mosquitto_message_v5_callback_set(mqtt, on_message);
 
 	for(;;) {
-		LoRaPacket p = lora.receivePacket(100);
+		LoRaPacket p = lora.receivePacket(50);
 		if (p.payloadLength()) {
 			printf("Received packet\n");
 			printf("  Bytes   : %d\n", p.payloadLength());
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		else {
-			if (int rc = mosquitto_loop(mqtt, 1, 1); rc != MOSQ_ERR_SUCCESS) {
+			if (int rc = mosquitto_loop(mqtt, 0, 1); rc != MOSQ_ERR_SUCCESS) {
 				fprintf(stderr, "Failed to process MQTT connection: %s\n", mosquitto_strerror(rc));
 				return 1;
 			}
