@@ -27,6 +27,10 @@ It works transparently: you only need to know LoRa settings and then it should b
 
 MIT
 
+Note that linked in to this project are:
+* https://github.com/Nicolai-Electronics/meshcore-c/
+* https://github.com/simoncocking/libLoRaPi
+
 
 
 -- written by Folkert van Heusden <folkert@vanheusden.com>

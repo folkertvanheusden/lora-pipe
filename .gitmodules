@@ -1,3 +1,6 @@
 [submodule "libLoRaPi"]
 	path = libLoRaPi
 	url = https://github.com/folkertvanheusden/libLoRaPi/
+[submodule "meshcore-c"]
+	path = meshcore-c
+	url = https://github.com/Nicolai-Electronics/meshcore-c/
