@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 		}
 		else {
 			if (int rc = mosquitto_loop(mqtt, 1, 1); rc != MOSQ_ERR_SUCCESS) {
-				fprintf(stderr, "Failed to connect to handle MQTT connection: %s\n", mosquitto_strerror(rc));
+				fprintf(stderr, "Failed to process MQTT connection: %s\n", mosquitto_strerror(rc));
 				return 1;
 			}
 		}
