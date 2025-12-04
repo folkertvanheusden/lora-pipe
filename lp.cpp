@@ -11,6 +11,7 @@
 #include <ncurses.h>
 #include <queue>
 #include <thread>
+#include <unistd.h>
 #include <sys/time.h>
 
 #include "config.h"
@@ -177,6 +178,10 @@ int main(int argc, char *argv[])
 	WINDOW *log_win   = newwin(15, 80,  0, 0);
 	WINDOW *line_win  = newwin( 1, 80, 15, 0);
 	WINDOW *stats_win = newwin(10, 80, 16, 0);
+
+	char hostname[80] { };
+	gethostname(hostname, sizeof hostname);
+	mvwprintw(stats_win, 0, 80 - strlen(hostname), "%s", hostname);
 
 	scrollok(log_win, TRUE);
 
