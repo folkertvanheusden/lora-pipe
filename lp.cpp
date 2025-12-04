@@ -89,9 +89,19 @@ void update_stats_win(WINDOW *stats_win, WINDOW *log_win)
 	wrefresh(stats_win);
 }
 
+void print_ts(WINDOW *log_win)
+{
+	uint64_t now   = get_ms();
+	time_t   t_now = now / 1000;
+	tm      *tm    = localtime(&t_now);
+	std::unique_lock<std::mutex> lck(ncurses_lock);
+	wprintw(log_win, "%02d:%02d:%02d.%03d ", tm->tm_hour, tm->tm_min, tm->tm_sec, now % 1000);
+}
+
 void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosquitto_property *)
 {
 	pars *ps = reinterpret_cast<pars *>(p);
+	print_ts(ps->pw);
 	std::unique_lock<std::mutex> lck(ncurses_lock);
 	wprintw(ps->pw, "from MQTT: %d\n\n", msg->payloadlen);
 	wrefresh(ps->pw);
@@ -212,6 +222,8 @@ int main(int argc, char *argv[])
 			auto  *pnt = p.getPayload();
 			size_t len = p.payloadLength();
 			rf_to_mqtt.push(duplicate(pnt, len), len);
+
+			print_ts(log_win);
 
 			std::unique_lock<std::mutex> lck(ncurses_lock);
 			wprintw(log_win, "length %d, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr());
