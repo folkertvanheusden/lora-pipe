@@ -41,3 +41,8 @@ pkg_check_modules(MQTT REQUIRED libmosquitto)
 target_link_libraries(lora-pipe ${MQTT_LIBRARIES})
 target_include_directories(lora-pipe PUBLIC ${MQTT_INCLUDE_DIRS})
 target_compile_options(lora-pipe PUBLIC ${MQTT_CFLAGS_OTHER})
+
+pkg_check_modules(NCURSES REQUIRED ncursesw)
+target_link_libraries(lora-pipe ${NCURSES_LIBRARIES})
+target_include_directories(lora-pipe PUBLIC ${NCURSES_INCLUDE_DIRS})
+target_compile_options(lora-pipe PUBLIC ${NCURSES_CFLAGS_OTHER})
