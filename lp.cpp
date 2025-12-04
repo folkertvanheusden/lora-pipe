@@ -102,8 +102,7 @@ void dump(uint8_t *pnt, size_t len, WINDOW *log_win)
 		if (message.type == MESHCORE_PAYLOAD_TYPE_ADVERT) {
 			meshcore_advert_t advert;
 			if (meshcore_advert_deserialize(message.payload, message.payload_length, &advert) >= 0) {
-				time_t t = advert.timestamp;
-				wprintw(log_win, "node advertisement, role: %s, timestamp: %s", role_to_string(advert.role), ctime(&t));
+				wprintw(log_win, "node advertisement, role: %s, timestamp: %u\n", role_to_string(advert.role), advert.timestamp);
 				if (advert.position_valid)
 					wprintw(log_win, "Position: lat=%d, lon=%d\n", advert.position_lat, advert.position_lon);
 				if (advert.name_valid)
