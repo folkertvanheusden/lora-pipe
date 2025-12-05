@@ -33,3 +33,8 @@
 #define MQTT_PORT	1883
 #define MQTT_TOPIC_FROM	"meshcore/fromwageningen"
 #define MQTT_TOPIC_TO	"meshcore/towageningen"
+
+
+// misceallaneous settings
+#define HASH_TIMEOUT        1500  // ms
+#define HASH_PURGE_INTERVAL 5  // seconds

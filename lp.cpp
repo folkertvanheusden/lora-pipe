@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <locale.h>
+#include <map>
 #include <mosquitto.h>
 #include <mutex>
 #include <ncurses.h>
@@ -191,6 +192,66 @@ ts_queue rf_to_mqtt;
 std::atomic_uint32_t mqtt_msgs = 0;
 std::atomic_uint32_t rf_msgs   = 0;
 
+std::map<uint32_t, uint64_t> hashes;
+std::mutex                   hash_lock;
+std::atomic_uint32_t         hash_dedup_count = 0;
+
+bool register_hash(const uint32_t h)
+{
+	std::unique_lock<std::mutex> lck(hash_lock);
+	return hashes.insert({ h, get_ms() }).second;
+}
+
+void purge_hashes()
+{
+	uint64_t now = get_ms();
+
+	std::unique_lock<std::mutex> lck(hash_lock);
+
+	auto it = hashes.begin();
+	while(it != hashes.end()) {
+		if (now - it->second >= HASH_TIMEOUT)
+			it = hashes.erase(it);
+		else
+			it++;
+	}
+}
+
+// hash function
+uint32_t adler32(const void *buf, size_t buflength)
+{
+	const uint8_t *buffer = reinterpret_cast<const uint8_t *>(buf);
+
+	uint32_t s1 = 1;
+	uint32_t s2 = 0;
+
+	for (size_t n = 0; n < buflength; n++) {
+		s1 = (s1 + buffer[n]) % 65521;
+		s2 = (s2 + s1) % 65521;
+	}
+
+	return (s2 << 16) | s1;
+}
+
+uint32_t calculate_hash(uint8_t *p, size_t len)
+{
+	return adler32(p, len);
+}
+
+void purge_thread()
+{
+	for(;;) {
+		sleep(HASH_PURGE_INTERVAL);
+		purge_hashes();
+	}
+}
+
+size_t get_hashmap_size()
+{
+	std::unique_lock<std::mutex> lck(hash_lock);
+	return hashes.size();
+}
+
 uint8_t *duplicate(uint8_t *in, size_t len)
 {
 	uint8_t *out = new uint8_t[len];
@@ -205,6 +266,7 @@ void update_stats_win(WINDOW *stats_win, WINDOW *log_win)
 	std::unique_lock<std::mutex> lck(ncurses_lock);
 	mvwprintw(stats_win, 0, 0, "MQTT msgs: %u, per second: %.3f", uint32_t(mqtt_msgs), mqtt_msgs * 1000. / time_diff);
 	mvwprintw(stats_win, 1, 0, "RF   msgs: %u, per second: %.3f", uint32_t(rf_msgs),   rf_msgs   * 1000. / time_diff);
+	mvwprintw(stats_win, 2, 0, "de-dup map size: %zu, dedupped: %u", get_hashmap_size(), uint32_t(hash_dedup_count));
 	wrefresh(stats_win);
 }
 
@@ -219,15 +281,26 @@ void print_ts(WINDOW *log_win)
 void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosquitto_property *)
 {
 	pars *ps = reinterpret_cast<pars *>(p);
-	std::unique_lock<std::mutex> lck(ncurses_lock);
-	wprintw(ps->pw, "\n");
-	print_ts(ps->pw);
-	wprintw(ps->pw, "from MQTT: %d\n", msg->payloadlen);
-	dump(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen, ps->pw);
-	wrefresh(ps->pw);
 
-	mqtt_to_rf.push(duplicate(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen), msg->payloadlen);
-	mqtt_msgs++;
+	uint32_t hash = calculate_hash(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen);
+	if (register_hash(hash)) {
+		mqtt_to_rf.push(duplicate(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen), msg->payloadlen);
+		mqtt_msgs++;
+
+		std::unique_lock<std::mutex> lck(ncurses_lock);
+		wprintw(ps->pw, "\n");
+		print_ts(ps->pw);
+		wprintw(ps->pw, "from MQTT: %d\n", msg->payloadlen);
+		dump(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen, ps->pw);
+	}
+	else {
+		hash_dedup_count++;
+		std::unique_lock<std::mutex> lck(ncurses_lock);
+		wprintw(ps->pw, "\n");
+		print_ts(ps->pw);
+		wprintw(ps->pw, "%08x from MQTT deduplicated\n", hash);
+	}
+	wrefresh(ps->pw);
 }
 
 void mqtt_thread(mosquitto *m, WINDOW *log_win)
@@ -329,24 +402,35 @@ int main(int argc, char *argv[])
         mosquitto_connect_callback_set   (mqtt, on_connect);
         mosquitto_message_v5_callback_set(mqtt, on_message);
 
-	std::thread mqtt_thread_handle(mqtt_thread, mqtt, log_win);
+	std::thread mqtt_thread_handle      (mqtt_thread, mqtt, log_win);
+	std::thread hash_purge_thread_handle(purge_thread);
 
 	for(;;) {
 		bool do_stats = false;
 
 		LoRaPacket p = lora.receivePacket(50);
 		if (p.payloadLength()) {
-			rf_msgs++;
-
 			auto  *pnt = p.getPayload();
 			size_t len = p.payloadLength();
-			rf_to_mqtt.push(duplicate(pnt, len), len);
 
-			std::unique_lock<std::mutex> lck(ncurses_lock);
-			wprintw(log_win, "\n");
-			print_ts(log_win);
-			wprintw(log_win, "length %d, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr());
-			dump(pnt, len, log_win);
+			uint32_t hash = calculate_hash(pnt, len);
+			if (register_hash(hash)) {
+				rf_to_mqtt.push(duplicate(pnt, len), len);
+				rf_msgs++;
+
+				std::unique_lock<std::mutex> lck(ncurses_lock);
+				wprintw(log_win, "\n");
+				print_ts(log_win);
+				wprintw(log_win, "length %d, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz, hash %08x\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr(), hash);
+				dump(pnt, len, log_win);
+			}
+			else {
+				hash_dedup_count++;
+				std::unique_lock<std::mutex> lck(ncurses_lock);
+				wprintw(log_win, "\n");
+				print_ts(log_win);
+				wprintw(log_win, "%08x deduplicated\n", hash);
+			}
 			wrefresh(log_win);
 
 			do_stats = true;
