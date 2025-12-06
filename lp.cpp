@@ -28,6 +28,7 @@ extern "C" {
 #include "meshcore-c/meshcore/payload/grp_txt.h"
 }
 
+#if DECODE_MESHCORE == 1
 // from https://github.com/Nicolai-Electronics/meshcore-c/ 
 uint8_t key[16] = {0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a, 0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72};
 
@@ -137,6 +138,11 @@ void dump(uint8_t *pnt, size_t len, WINDOW *log_win)
 		wprintw(log_win, "Failed to decode message\n");
 	}
 }
+#else
+void dump(uint8_t *pnt, size_t len, WINDOW *log_win)
+{
+}
+#endif
 
 std::mutex ncurses_lock;
 
