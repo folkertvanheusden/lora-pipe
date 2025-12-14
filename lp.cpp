@@ -30,8 +30,6 @@ extern "C" {
 
 #if DECODE_MESHCORE == 1
 // from https://github.com/Nicolai-Electronics/meshcore-c/ 
-uint8_t key[16] = {0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a, 0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72};
-
 const char* type_to_string(meshcore_payload_type_t type) {
     switch (type) {
         case MESHCORE_PAYLOAD_TYPE_REQ:
@@ -116,14 +114,41 @@ void dump(uint8_t *pnt, size_t len, WINDOW *log_win)
 			}
 		}
 		else if (message.type == MESHCORE_PAYLOAD_TYPE_GRP_TXT) {
+			uint8_t key[16] = {0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a, 0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72};
 			meshcore_grp_txt_t grp_txt;
 			if (meshcore_grp_txt_deserialize(message.payload, message.payload_length, &grp_txt) >= 0) {
-				wprintw(log_win, "Decoded group text message: ");
-				for (unsigned int i = 0; i < grp_txt.data_length; i++)
-					wprintw(log_win, "%c", grp_txt.data[i] > 32 && grp_txt.data[i] < 127 ? grp_txt.data[i] : '.');
-				wprintw(log_win, "\n");
+				// TO-DO: all of this MAC verification and decryption should be moved somewhere else
 
-				emitted_text = true;
+				uint8_t out[128];
+				size_t  out_len =
+					hmac_sha256(key, sizeof(key), grp_txt.data, grp_txt.data_length, out, MESHCORE_CIPHER_MAC_SIZE);
+
+				if (memcmp(out, grp_txt.mac, MESHCORE_CIPHER_MAC_SIZE) == 0) {
+					// Copy encrypted data to buffer for decryption, AES works in-place
+					grp_txt.decrypted.data_length = grp_txt.data_length;
+					memcpy(grp_txt.decrypted.data, grp_txt.data, grp_txt.data_length);
+
+					struct AES_ctx ctx;
+					AES_init_ctx(&ctx, key);
+					for (uint8_t i = 0; i < (grp_txt.decrypted.data_length / 16); i++) {
+						AES_ECB_decrypt(&ctx, &grp_txt.decrypted.data[i * 16]);
+					}
+
+					uint8_t position = 0;
+					memcpy(&grp_txt.decrypted.timestamp, grp_txt.decrypted.data, sizeof(uint32_t));
+					position                            += sizeof(uint32_t);
+					grp_txt.decrypted.text_type          = grp_txt.decrypted.data[position];
+					position                            += sizeof(uint8_t);
+					size_t text_length                   = grp_txt.decrypted.data_length - position;
+					grp_txt.decrypted.text               = (char*)&grp_txt.decrypted.data[position];
+					grp_txt.decrypted.text[text_length]  = '\0';
+
+					wprintw(log_win, "Timestamp: %" PRIu32 "\n", grp_txt.decrypted.timestamp);
+					wprintw(log_win, "Text Type: %u\n", grp_txt.decrypted.text_type);
+					wprintw(log_win, "Message: '%s'\n", grp_txt.decrypted.text);
+
+					emitted_text = true;
+				}
 			}
 		}
 
@@ -414,7 +439,7 @@ int main(int argc, char *argv[])
 	for(;;) {
 		bool do_stats = false;
 
-		LoRaPacket p = lora.receivePacket(50);
+		LoRaPacket p = lora.receivePacket(200);
 		if (p.payloadLength()) {
 			auto  *pnt = p.getPayload();
 			size_t len = p.payloadLength();
