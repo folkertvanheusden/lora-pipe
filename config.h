@@ -31,11 +31,10 @@
 
 #define MQTT_HOST	"vps001.vanheusden.com"  // please use your own mqtt server
 #define MQTT_PORT	1883
-#define MQTT_TOPIC_FROM	"meshcore/fromwageningen"
-#define MQTT_TOPIC_TO	"meshcore/towageningen"
+#define MQTT_TOPIC	"meshcore/bridge"
 
 
-// misceallaneous settings
+// miscellaneous settings
 #define HASH_TIMEOUT        1500  // ms
 #define HASH_PURGE_INTERVAL 5  // seconds
 #define DECODE_MESHCORE     1  // set to 0 when tunneling a different protocol

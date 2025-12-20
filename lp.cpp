@@ -347,7 +347,7 @@ void mqtt_thread(mosquitto *m, WINDOW *log_win)
 		if (rf_to_mqtt.empty() == false) {
 			auto msg = rf_to_mqtt.pop();
 
-			if (int rc = mosquitto_publish(m, nullptr, MQTT_TOPIC_TO, msg.second, msg.first, 0, false); rc != MOSQ_ERR_SUCCESS) {
+			if (int rc = mosquitto_publish(m, nullptr, MQTT_TOPIC, msg.second, msg.first, 0, false); rc != MOSQ_ERR_SUCCESS) {
 				std::unique_lock<std::mutex> lck(ncurses_lock);
 				wprintw(log_win, "Publish error: %s\n", mosquitto_strerror(rc));
 				lck.unlock();
@@ -366,7 +366,7 @@ void on_connect(mosquitto *mqtt, void *p, int)
 	wprintw(ps->pw, "Subscribe to mqtt\n");
 	lck.unlock();
 
-	if (int rc = mosquitto_subscribe(mqtt, nullptr, MQTT_TOPIC_FROM, 0); rc != MOSQ_ERR_SUCCESS) {
+	if (int rc = mosquitto_subscribe(mqtt, nullptr, MQTT_TOPIC, 0); rc != MOSQ_ERR_SUCCESS) {
 		std::unique_lock<std::mutex> lck(ncurses_lock);
 		fprintf(stderr, "Subscribe error: %s\n", mosquitto_strerror(rc));
 		lck.unlock();
