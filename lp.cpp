@@ -225,7 +225,8 @@ std::atomic_uint32_t rf_msgs   = 0;
 
 std::map<uint32_t, uint64_t> hashes;
 std::mutex                   hash_lock;
-std::atomic_uint32_t         hash_dedup_count = 0;
+std::atomic_uint32_t         hash_dedup_count_rf = 0;
+std::atomic_uint32_t         hash_dedup_count_mqtt = 0;
 
 bool register_hash(const uint32_t h)
 {
@@ -296,7 +297,7 @@ void update_stats_win(WINDOW *stats_win, WINDOW *log_win)
 
 	mvwprintw(stats_win, 0, 0, "MQTT msgs: %u, per second: %.3f", uint32_t(mqtt_msgs), mqtt_msgs * 1000. / time_diff);
 	mvwprintw(stats_win, 1, 0, "RF   msgs: %u, per second: %.3f", uint32_t(rf_msgs),   rf_msgs   * 1000. / time_diff);
-	mvwprintw(stats_win, 2, 0, "de-dup map size: %zu, dedupped: %u", get_hashmap_size(), uint32_t(hash_dedup_count));
+	mvwprintw(stats_win, 2, 0, "de-dup map size: %zu, dedupped rf/mqtt: %u/%u", get_hashmap_size(), uint32_t(hash_dedup_count_rf), uint32_t(hash_dedup_count_mqtt));
 	wrefresh(stats_win);
 }
 
@@ -324,7 +325,7 @@ void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosqui
 		dump(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen, ps->pw);
 	}
 	else {
-		hash_dedup_count++;
+		hash_dedup_count_mqtt++;
 		std::unique_lock<std::mutex> lck(ncurses_lock);
 		wprintw(ps->pw, "\n");
 		print_ts(ps->pw);
@@ -457,7 +458,7 @@ int main(int argc, char *argv[])
 				was_dedup = false;
 			}
 			else {
-				hash_dedup_count++;
+				hash_dedup_count_rf++;
 				std::unique_lock<std::mutex> lck(ncurses_lock);
 				if (was_dedup == false)
 					wprintw(log_win, "\n");
