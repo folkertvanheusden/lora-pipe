@@ -26,6 +26,11 @@ Note: the 'meshcore-c' dependency is *only* for debug-output. If a packet is not
 * After configuring by adapting config.h and building the program (`cmake -B build && make -j -C build`) you can run the program from the commandline or (preferably) in a systemd service. the program will terminate if it detects any problems.
 
 
+## see also
+
+* https://github.com/folkertvanheusden/mcb  (ESP32-S3 version)
+
+
 ## license
 
 MIT
