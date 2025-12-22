@@ -294,7 +294,6 @@ void update_stats_win(WINDOW *stats_win, WINDOW *log_win)
 {
 	uint32_t time_diff = std::max(get_ms() - running_since, uint64_t(1));
 
-	std::unique_lock<std::mutex> lck(ncurses_lock);
 	mvwprintw(stats_win, 0, 0, "MQTT msgs: %u, per second: %.3f", uint32_t(mqtt_msgs), mqtt_msgs * 1000. / time_diff);
 	mvwprintw(stats_win, 1, 0, "RF   msgs: %u, per second: %.3f", uint32_t(rf_msgs),   rf_msgs   * 1000. / time_diff);
 	mvwprintw(stats_win, 2, 0, "de-dup map size: %zu, dedupped: %u", get_hashmap_size(), uint32_t(hash_dedup_count));
@@ -436,6 +435,7 @@ int main(int argc, char *argv[])
 	std::thread mqtt_thread_handle      (mqtt_thread, mqtt, log_win);
 	std::thread hash_purge_thread_handle(purge_thread);
 
+	bool was_dedup = false;
 	for(;;) {
 		bool do_stats = false;
 
@@ -454,13 +454,16 @@ int main(int argc, char *argv[])
 				print_ts(log_win);
 				wprintw(log_win, "length %d, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz, hash %08x\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr(), hash);
 				dump(pnt, len, log_win);
+				was_dedup = false;
 			}
 			else {
 				hash_dedup_count++;
 				std::unique_lock<std::mutex> lck(ncurses_lock);
-				wprintw(log_win, "\n");
+				if (was_dedup == false)
+					wprintw(log_win, "\n");
 				print_ts(log_win);
 				wprintw(log_win, "%08x deduplicated\n", hash);
+				was_dedup = true;
 			}
 			wrefresh(log_win);
 
@@ -485,8 +488,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (do_stats) {
-			update_stats_win(stats_win, log_win);
 			std::unique_lock<std::mutex> lck(ncurses_lock);
+			update_stats_win(stats_win, log_win);
 			doupdate();
 		}
 	}
