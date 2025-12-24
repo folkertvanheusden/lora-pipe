@@ -27,7 +27,6 @@
 
 
 // MQTT settings
-// note that you need to swap FROM/TO on the other side
 
 #define MQTT_HOST	"vps001.vanheusden.com"  // please use your own mqtt server
 #define MQTT_PORT	1883
