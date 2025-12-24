@@ -436,7 +436,7 @@ int main(int argc, char *argv[])
 	std::thread mqtt_thread_handle      (mqtt_thread, mqtt, log_win);
 	std::thread hash_purge_thread_handle(purge_thread);
 
-	bool was_dedup = false;
+	bool was_dedup   = false;
 	for(;;) {
 		bool do_stats = false;
 
@@ -490,6 +490,7 @@ int main(int argc, char *argv[])
 
 		if (do_stats) {
 			std::unique_lock<std::mutex> lck(ncurses_lock);
+			werase(stats_win);
 			update_stats_win(stats_win, log_win);
 			doupdate();
 		}
