@@ -325,7 +325,7 @@ void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosqui
 		std::unique_lock<std::mutex> lck(ncurses_lock);
 		wprintw(ps->pw, "\n");
 		print_ts(ps->pw);
-		wprintw(ps->pw, "from MQTT: %d\n", msg->payloadlen);
+		wprintw(ps->pw, "%d bytes from MQTT in %s\n", msg->payloadlen, msg->topic);
 		dump(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen, ps->pw);
 	}
 	else {
@@ -333,7 +333,7 @@ void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosqui
 		std::unique_lock<std::mutex> lck(ncurses_lock);
 		wprintw(ps->pw, "\n");
 		print_ts(ps->pw);
-		wprintw(ps->pw, "%08x from MQTT deduplicated\n", hash);
+		wprintw(ps->pw, "%08x from MQTT deduplicated (%s)\n", hash, msg->topic);
 	}
 	wrefresh(ps->pw);
 }
