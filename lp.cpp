@@ -325,7 +325,7 @@ void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosqui
 		std::unique_lock<std::mutex> lck(ncurses_lock);
 		wprintw(ps->pw, "\n");
 		print_ts(ps->pw);
-		wprintw(ps->pw, "%d bytes from MQTT in %s\n", msg->payloadlen, msg->topic);
+		wprintw(ps->pw, "%d bytes from MQTT in %s [%08x]\n", msg->payloadlen, msg->topic, hash);
 		dump(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen, ps->pw);
 	}
 	else {
@@ -333,7 +333,7 @@ void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosqui
 		std::unique_lock<std::mutex> lck(ncurses_lock);
 		wprintw(ps->pw, "\n");
 		print_ts(ps->pw);
-		wprintw(ps->pw, "%08x from MQTT deduplicated (%s)\n", hash, msg->topic);
+		wprintw(ps->pw, "[%08x] from MQTT deduplicated (%s)\n", hash, msg->topic);
 	}
 	wrefresh(ps->pw);
 }
@@ -465,7 +465,7 @@ int main(int argc, char *argv[])
 				std::unique_lock<std::mutex> lck(ncurses_lock);
 				wprintw(log_win, "\n");
 				print_ts(log_win);
-				wprintw(log_win, "length %zu, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz, hash %08x\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr(), hash);
+				wprintw(log_win, "length %zu, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz, hash [%08x]\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr(), hash);
 				dump(pnt, len, log_win);
 				was_dedup = false;
 			}
@@ -475,7 +475,7 @@ int main(int argc, char *argv[])
 				if (was_dedup == false)
 					wprintw(log_win, "\n");
 				print_ts(log_win);
-				wprintw(log_win, "%08x deduplicated\n", hash);
+				wprintw(log_win, "[%08x] deduplicated\n", hash);
 				was_dedup = true;
 			}
 			wrefresh(log_win);
