@@ -34,6 +34,6 @@
 
 
 // miscellaneous settings
-#define HASH_TIMEOUT        1500  // ms
-#define HASH_PURGE_INTERVAL 5  // seconds
+#define HASH_TIMEOUT        5000  // ms
+#define HASH_PURGE_INTERVAL 15  // seconds
 #define DECODE_MESHCORE     1  // set to 0 when tunneling a different protocol
