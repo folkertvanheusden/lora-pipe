@@ -298,6 +298,11 @@ void update_stats_win(WINDOW *stats_win, WINDOW *log_win)
 	mvwprintw(stats_win, 0, 0, "MQTT msgs: %u, per second: %.3f", uint32_t(mqtt_msgs), mqtt_msgs * 1000. / time_diff);
 	mvwprintw(stats_win, 1, 0, "RF   msgs: %u, per second: %.3f", uint32_t(rf_msgs),   rf_msgs   * 1000. / time_diff);
 	mvwprintw(stats_win, 2, 0, "de-dup map size: %zu, dedupped rf/mqtt: %u/%u", get_hashmap_size(), uint32_t(hash_dedup_count_rf), uint32_t(hash_dedup_count_mqtt));
+
+	char hostname[80] { };
+	gethostname(hostname, sizeof hostname);
+	mvwprintw(stats_win, 0, 80 - strlen(hostname), "%s", hostname);
+
 	wrefresh(stats_win);
 }
 
@@ -306,7 +311,7 @@ void print_ts(WINDOW *log_win)
 	uint64_t now   = get_ms();
 	time_t   t_now = now / 1000;
 	tm      *tm    = localtime(&t_now);
-	wprintw(log_win, "%02d:%02d:%02d.%03d ", tm->tm_hour, tm->tm_min, tm->tm_sec, now % 1000);
+	wprintw(log_win, "%02d:%02d:%02d.%03d ", tm->tm_hour, tm->tm_min, tm->tm_sec, int(now % 1000));
 }
 
 void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosquitto_property *)
@@ -412,10 +417,6 @@ int main(int argc, char *argv[])
 	WINDOW *line_win  = newwin( 1, 80, 15, 0);
 	WINDOW *stats_win = newwin(10, 80, 16, 0);
 
-	char hostname[80] { };
-	gethostname(hostname, sizeof hostname);
-	mvwprintw(stats_win, 0, 80 - strlen(hostname), "%s", hostname);
-
 	scrollok(log_win, TRUE);
 
 	mvwprintw(line_win, 0, 0, "--------------------------------------------------------------------------------");
@@ -453,7 +454,7 @@ int main(int argc, char *argv[])
 				std::unique_lock<std::mutex> lck(ncurses_lock);
 				wprintw(log_win, "\n");
 				print_ts(log_win);
-				wprintw(log_win, "length %d, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz, hash %08x\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr(), hash);
+				wprintw(log_win, "length %zu, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz, hash %08x\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr(), hash);
 				dump(pnt, len, log_win);
 				was_dedup = false;
 			}
