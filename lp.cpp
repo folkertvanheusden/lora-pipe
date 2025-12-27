@@ -30,7 +30,12 @@ extern "C" {
 
 char hostname[80] { };
 
-#if DECODE_MESHCORE == 1
+template<typename T>
+inline void ignore_result(const T & /* unused result */)
+{
+}
+
+#if MESHCORE_MODE == 1
 // from https://github.com/Nicolai-Electronics/meshcore-c/ 
 const char* type_to_string(meshcore_payload_type_t type) {
     switch (type) {
@@ -269,7 +274,15 @@ uint32_t adler32(const void *buf, size_t buflength)
 
 uint32_t calculate_hash(uint8_t *p, size_t len)
 {
+#if MESHCORE_MODE == 1
+	uint16_t path_len = p[1];
+	uint16_t offset   = 2 + path_len;
+	if (offset >= len)
+		return 0;
+	return adler32(&p[offset], len - offset);
+#else
 	return adler32(p, len);
+#endif
 }
 
 void purge_thread()
@@ -352,7 +365,7 @@ void mqtt_thread(mosquitto *m, WINDOW *log_win)
 			auto msg = rf_to_mqtt.pop();
 
 			char *topic = nullptr;
-			asprintf(&topic, "%s/%s", MQTT_TOPIC, hostname);
+			ignore_result(asprintf(&topic, "%s/%s", MQTT_TOPIC, hostname));
 
 			if (int rc = mosquitto_publish(m, nullptr, topic, msg.second, msg.first, 0, false); rc != MOSQ_ERR_SUCCESS) {
 				std::unique_lock<std::mutex> lck(ncurses_lock);
@@ -376,7 +389,7 @@ void on_connect(mosquitto *mqtt, void *p, int)
 	lck.unlock();
 
 	char *topic = nullptr;
-	asprintf(&topic, "%s/#", MQTT_TOPIC);
+	ignore_result(asprintf(&topic, "%s/#", MQTT_TOPIC));
 
 	if (int rc = mosquitto_subscribe(mqtt, nullptr, topic, 0); rc != MOSQ_ERR_SUCCESS) {
 		std::unique_lock<std::mutex> lck(ncurses_lock);
