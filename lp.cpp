@@ -279,6 +279,11 @@ uint32_t calculate_hash(uint8_t *p, size_t len)
 	uint16_t offset   = 2 + path_len;
 	if (offset >= len)
 		return 0;
+	uint8_t route     = p[0] & 3;
+	if (route == 0 /* flood */ || route == 3 /* direct */)
+		offset += 4;  // transport codes
+	if (offset >= len)
+		return 0;
 	return adler32(&p[offset], len - offset);
 #else
 	return adler32(p, len);
