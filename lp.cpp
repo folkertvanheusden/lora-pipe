@@ -75,24 +75,54 @@ void dolog(const char *const fmt, ...)
 
 void log_packet(const char *const source, const uint8_t *const p, const size_t len)
 {
-	std::string path;
-	uint16_t    path_len = p[1];
-	int         offset   = 2;
-	uint8_t     route    = p[0] & 3;
+#if MESHCORE_MODE == 1
+	std::string    path;
+	uint16_t       path_len     = p[1];
+	int            offset       = 2;
+	uint8_t        route        = p[0] & 3;
 	if (route == 0 /* flood */ || route == 3 /* direct */)
 		offset += 4;  // transport codes
+	uint8_t        payload_type = (p[0] >> 2) & 15;
+	const uint8_t *payload      = nullptr;
 	if (offset + path_len <= len) {
+		payload = &p[offset + path_len];
+
+		if (payload_type == 4)  // node advertisement
+			path = std::format("{:02x}", payload[0]);
+		else if (payload_type == 8 /* returned path */ || payload_type == 0 /* request */ || payload_type == 1 /* response */ || payload_type == 2 /* text */)
+			path = std::format("{:02x}", payload[1]);
+
 		for(int i=0; i<path_len; i++) {
-			if (i)
+			if (path.empty() == false)
 				path += " ";
 			path += std::format("{:02x}", p[offset+i]);
 		}
 	}
 	else {
-		path = "!";
+		path = "?";
 	}
 
-	dolog("[%s] path: %s (%zu bytes)", source, path.c_str(), len);
+	const char *const payload_types[] {
+		"REQ",
+		"RESPONSE",
+		"TXT_MSG",
+		"ACK",
+		"ADVERT",
+		"GRP_TXT",
+		"GRP_DATA",
+		"ANON_REQ",
+		"PATH",
+		"TRACE",
+		"MULTIPART",
+		"CONTROL",
+		"0x0C-reserved",
+		"0x0D-reserved",
+		"0x0E-reserved",
+		"RAW_CUSTOM"
+	};
+
+	dolog("[%s] path: %s, %zu byte(s), type: %s", source, path.c_str(), len, payload_types[payload_type]);
+#endif
 }
 
 #if MESHCORE_MODE == 1
