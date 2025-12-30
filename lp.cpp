@@ -4,8 +4,11 @@
 #include <atomic>
 #include <cinttypes>
 #include <condition_variable>
+#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <format>
+#include <fstream>
 #include <locale.h>
 #include <map>
 #include <mosquitto.h>
@@ -33,6 +36,63 @@ char hostname[80] { };
 template<typename T>
 inline void ignore_result(const T & /* unused result */)
 {
+}
+
+uint64_t get_ms()
+{
+	timeval tv { };
+	gettimeofday(&tv, nullptr);
+	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+void dolog(const char *const fmt, ...)
+{
+	uint64_t  now        = get_ms();
+	char     *log_buffer = nullptr;
+
+	va_list ap;
+	va_start(ap, fmt);
+	ignore_result(vasprintf(&log_buffer, fmt, ap));
+	va_end(ap);
+
+	char  *time_buffer = nullptr;
+        time_t t_now       = now / 1000000;
+        tm     tm { };
+	if (!localtime_r(&t_now, &tm))
+		ignore_result(asprintf(&time_buffer, "localtime_r failed"));
+	else {
+		ignore_result(asprintf(&time_buffer, "%04d-%02d-%02d %02d:%02d:%02d.%03d",
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, int(now % 1000)));
+	}
+
+	std::ofstream fh("logfile.txt", std::ios::out | std::ios::app);
+	fh << time_buffer << " " << log_buffer << std::endl;
+	fh.close();
+
+	free(time_buffer);
+	free(log_buffer);
+}
+
+void log_packet(const char *const source, const uint8_t *const p, const size_t len)
+{
+	std::string path;
+	uint16_t    path_len = p[1];
+	int         offset   = 2;
+	uint8_t     route    = p[0] & 3;
+	if (route == 0 /* flood */ || route == 3 /* direct */)
+		offset += 4;  // transport codes
+	if (offset + path_len <= len) {
+		for(int i=0; i<path_len; i++) {
+			if (i)
+				path += " ";
+			path += std::format("{:02x}", p[offset+i]);
+		}
+	}
+	else {
+		path = "!";
+	}
+
+	dolog("[%s] path: %s (%zu bytes)", source, path.c_str());
 }
 
 #if MESHCORE_MODE == 1
@@ -215,13 +275,6 @@ public:
 	}
 };
 
-uint64_t get_ms()
-{
-	timeval tv { };
-	gettimeofday(&tv, nullptr);
-	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-}
-
 uint64_t running_since = get_ms();
 ts_queue mqtt_to_rf;
 ts_queue rf_to_mqtt;
@@ -345,6 +398,7 @@ void on_message(mosquitto *, void *p, const mosquitto_message *msg, const mosqui
 		print_ts(ps->pw);
 		wprintw(ps->pw, "%d bytes from MQTT in %s [%08x]\n", msg->payloadlen, msg->topic, hash);
 		dump(reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen, ps->pw);
+		log_packet("MQTT", reinterpret_cast<uint8_t *>(msg->payload), msg->payloadlen);
 	}
 	else {
 		hash_dedup_count_mqtt++;
@@ -485,6 +539,7 @@ int main(int argc, char *argv[])
 				print_ts(log_win);
 				wprintw(log_win, "length %zu, RSSI: %d dBm, SNR: %.1f dB, freq.err.: %d Hz, hash [%08x]\n", len, p.getPacketRSSI(), p.getSNR(), p.getFreqErr(), hash);
 				dump(pnt, len, log_win);
+				log_packet("RF", pnt, len);
 				was_dedup = false;
 			}
 			else {

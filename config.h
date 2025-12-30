@@ -37,3 +37,4 @@
 #define HASH_TIMEOUT        5000  // ms
 #define HASH_PURGE_INTERVAL 15  // seconds
 #define MESHCORE_MODE       1  // set to 0 when tunneling a different protocol
+#define LOGFILE             "logfile.txt"  // set to /dev/null if not required
