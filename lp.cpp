@@ -56,7 +56,7 @@ void dolog(const char *const fmt, ...)
 	va_end(ap);
 
 	char  *time_buffer = nullptr;
-        time_t t_now       = now / 1000000;
+        time_t t_now       = now / 1000;
         tm     tm { };
 	if (!localtime_r(&t_now, &tm))
 		ignore_result(asprintf(&time_buffer, "localtime_r failed"));
