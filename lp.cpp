@@ -92,7 +92,7 @@ void log_packet(const char *const source, const uint8_t *const p, const size_t l
 		path = "!";
 	}
 
-	dolog("[%s] path: %s (%zu bytes)", source, path.c_str());
+	dolog("[%s] path: %s (%zu bytes)", source, path.c_str(), len);
 }
 
 #if MESHCORE_MODE == 1
